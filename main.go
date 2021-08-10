@@ -136,7 +136,7 @@ func checkUpdates(wg *sync.WaitGroup, db *gorm.DB, client *xmpp.Client) {
 	db.Where("app_id IN ? ", appIdList).Find(&knownApps)
 
 	repoApps := make(map[string]Application)
-	var updatedApps []*DBApplication
+	var updatedApps []DBApplication
 	for _, app := range fdroid.Applications {
 		repoApps[app.ID] = app
 	}
