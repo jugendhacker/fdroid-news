@@ -145,7 +145,7 @@ func checkUpdates(wg *sync.WaitGroup, db *gorm.DB, client *xmpp.Client) {
 
 	for _, app := range knownApps {
 		repoApp := repoApps[app.AppId]
-		if app.VersionCode > repoApp.VersionCode {
+		if app.VersionCode < repoApp.VersionCode {
 			app.Name = repoApp.Name
 			app.Version = repoApp.Version
 			app.VersionCode = repoApp.VersionCode
