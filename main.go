@@ -106,7 +106,10 @@ func main() {
 func initDB(db *gorm.DB) {
 	log.Print("Init DB from index...")
 
-	fdroid := getIndex()
+	fdroid, err := getIndex()
+	if err.(net.Error).Temporary() {
+		log.Fatal("Could not init DB because of timeout, please restart later")
+	}
 	appMap := make(map[string]Application)
 	for _, app := range fdroid.Applications {
 		appMap[app.ID] = app
@@ -117,7 +120,14 @@ func initDB(db *gorm.DB) {
 func checkUpdates(wg *sync.WaitGroup, db *gorm.DB, client *xmpp.Client) {
 	log.Print("Starting update check...")
 
-	fdroid := getIndex()
+	fdroid, err := getIndex()
+	if err != nil {
+		if err, ok := err.(net.Error); ok && err.Temporary() {
+			return
+		} else {
+			log.Print(err.Error())
+		}
+	}
 
 	var knownApps []DBApplication
 
@@ -191,10 +201,15 @@ func checkUpdates(wg *sync.WaitGroup, db *gorm.DB, client *xmpp.Client) {
 	wg.Done()
 }
 
-func getIndex() *Fdroid {
+func getIndex() (Fdroid, error) {
 	resp, err := http.Get("https://f-droid.org/repo/index.xml")
 	if err != nil {
-		log.Fatal(err.Error())
+		if err, ok := err.(net.Error); ok && err.Temporary() {
+			log.Printf("Temporary error reaching %s", "https://f-droid.org/repo/index.xml")
+			return Fdroid{}, err
+		} else {
+			return Fdroid{}, err
+		}
 	}
 	var fdroid Fdroid
 
@@ -205,7 +220,7 @@ func getIndex() *Fdroid {
 
 	xml.Unmarshal(b, &fdroid)
 
-	return &fdroid
+	return fdroid, nil
 }
 
 func saveNewApps(newApps map[string]Application, db *gorm.DB) (addedApps []*DBApplication) {
