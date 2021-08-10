@@ -183,7 +183,7 @@ func checkUpdates(wg *sync.WaitGroup, db *gorm.DB, client *xmpp.Client) {
 		}
 	}
 	if len(updatedApps) > 0 {
-		builder.WriteString(fmt.Sprintf("*Updated (%d)*\n", len(addedApps)))
+		builder.WriteString(fmt.Sprintf("*Updated (%d)*\n", len(updatedApps)))
 		for _, app := range updatedApps {
 			builder.WriteString(fmt.Sprintf("* %s\n", app.Name))
 		}
