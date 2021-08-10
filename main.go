@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/mattn/go-xmpp"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -57,17 +59,33 @@ func main() {
 		initDB(db)
 	}
 
-	ticker := time.NewTicker(15 * time.Minute)
+	options := xmpp.Options{
+		Host:     "example.org:5223",
+		User:     "feedbot@example.org",
+		Password: "examplePassword",
+	}
+	client, err := options.NewClient()
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	_, err = client.JoinMUCNoHistory("newsbot-pg@conference.jugendhacker.de", "News")
+	if err != nil {
+		log.Fatal(err.Error())
+	}
 
 	var wg sync.WaitGroup
 
 	wg.Add(1)
-	go checkUpdates(&wg, db)
+	ticker := time.NewTicker(15 * time.Minute)
+
+	wg.Add(1)
+	go checkUpdates(&wg, db, client)
 	wg.Add(1)
 	go func() {
 		for range ticker.C {
 			wg.Add(1)
-			go checkUpdates(&wg, db)
+			go checkUpdates(&wg, db, client)
 		}
 		wg.Done()
 	}()
@@ -86,7 +104,7 @@ func initDB(db *gorm.DB) {
 	saveNewApps(appMap, db)
 }
 
-func checkUpdates(wg *sync.WaitGroup, db *gorm.DB) {
+func checkUpdates(wg *sync.WaitGroup, db *gorm.DB, client *xmpp.Client) {
 	log.Print("Starting update check...")
 
 	fdroid := getIndex()
@@ -150,6 +168,15 @@ func checkUpdates(wg *sync.WaitGroup, db *gorm.DB) {
 	}
 
 	log.Print(builder.String())
+
+	_, err = client.Send(xmpp.Chat{
+		Remote: "newsbot-pg@conference.jugendhacker.de",
+		Type:   "groupchat",
+		Text:   builder.String(),
+	})
+	if err != nil {
+		log.Fatal(err.Error())
+	}
 
 	wg.Done()
 }
