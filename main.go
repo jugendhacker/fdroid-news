@@ -149,10 +149,12 @@ func checkUpdates(wg *sync.WaitGroup, db *gorm.DB, client *xmpp.Client) {
 			app.Name = repoApp.Name
 			app.Version = repoApp.Version
 			app.VersionCode = repoApp.VersionCode
-			updatedApps = append(updatedApps, &app)
-			db.Save(&app)
+			updatedApps = append(updatedApps, app)
 		}
 		delete(repoApps, app.AppId)
+	}
+	if len(updatedApps) > 0 {
+		db.Save(&updatedApps)
 	}
 
 	log.Print("Found all updated apps")
