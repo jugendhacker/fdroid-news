@@ -76,7 +76,17 @@ func main() {
 
 	var wg sync.WaitGroup
 
+	pingTicker := time.NewTicker(30 * time.Second)
+
 	wg.Add(1)
+	go func() {
+		for range pingTicker.C {
+			wg.Add(1)
+			doPings(client, &wg)
+		}
+		wg.Done()
+	}()
+
 	ticker := time.NewTicker(15 * time.Minute)
 
 	wg.Add(1)
@@ -214,4 +224,17 @@ func saveNewApps(newApps map[string]Application, db *gorm.DB) (addedApps []*DBAp
 		db.Create(&addedApps)
 	}
 	return
+}
+
+func doPings(client *xmpp.Client, wg *sync.WaitGroup) {
+	err := client.PingC2S("", "")
+	if err != nil {
+		log.Fatalf("C2S ping failed with: %e", err)
+	}
+
+	err = client.PingC2S("", "newsbot-pg@conference.jugendhacker.de/News")
+	if err != nil {
+		log.Fatalf("MUC ping failed with %e", err)
+	}
+	wg.Done()
 }
