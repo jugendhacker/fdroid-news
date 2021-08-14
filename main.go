@@ -53,6 +53,20 @@ type Application struct {
 	VersionCode int    `xml:"marketvercode"`
 }
 
+type PingRequest struct {
+	XMLName xml.Name `xml:"urn:xmpp:ping ping"`
+}
+
+type IQErrorServiceUnavailable struct {
+	XMLName xml.Name `xml:"error"`
+	Type    string   `xml:"type,attr"`
+	Error   ErrorServiceUnavailable
+}
+
+type ErrorServiceUnavailable struct {
+	XMLName xml.Name `xml:"urn:ietf:params:xml:ns:xmpp-stanzas service-unavailable"`
+}
+
 type DBApplication struct {
 	gorm.Model
 	AppId       string `gorm:"index"`
@@ -86,6 +100,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err.Error())
 	}
+
+	go processIncommingStanzas(client)
 
 	_, err = client.JoinMUCNoHistory("newsbot-pg@conference.jugendhacker.de", "News")
 	if err != nil {
@@ -264,12 +280,50 @@ func saveNewApps(newApps map[string]Application, db *gorm.DB) (addedApps []*DBAp
 func doPings(client *xmpp.Client, wg *sync.WaitGroup) {
 	err := client.PingC2S("", "")
 	if err != nil {
-		log.Fatalf("C2S ping failed with: %e", err)
+		log.Fatalf("C2S ping failed with: %s", err.Error())
 	}
 
 	err = client.PingC2S("", "newsbot-pg@conference.jugendhacker.de/News")
 	if err != nil {
-		log.Fatalf("MUC ping failed with %e", err)
+		log.Fatalf("MUC ping failed with %s", err.Error())
 	}
 	wg.Done()
+}
+
+func processIncommingStanzas(client *xmpp.Client) {
+	for {
+		stanza, err := client.Recv()
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+
+		switch value := stanza.(type) {
+		case xmpp.IQ:
+			log.Printf("Incomming iq, type: %s, query: %s, id: %s, from: %s", value.Type, string(value.Query), value.ID, value.From)
+			if value.Type == "get" {
+				err := xml.Unmarshal(value.Query, &PingRequest{})
+				if err == nil {
+					log.Print("Sending ping response")
+					client.SendResultPing(value.ID, value.From)
+				} else {
+					iqError := IQErrorServiceUnavailable{
+						Type:  "cancel",
+						Error: ErrorServiceUnavailable{},
+					}
+
+					response, err := xml.Marshal(iqError)
+					if err != nil {
+						log.Fatal(err.Error())
+					}
+
+					log.Printf("Sending error response: %s", string(response))
+
+					_, err = client.RawInformation(value.To, value.From, value.ID, "error", string(response))
+					if err != nil {
+						log.Fatal(err.Error())
+					}
+				}
+			}
+		}
+	}
 }
