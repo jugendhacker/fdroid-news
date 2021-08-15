@@ -26,6 +26,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -75,6 +76,7 @@ type DBApplication struct {
 	Name        string
 	Version     string
 	VersionCode int
+	Repo        string `gorm:"index"`
 }
 
 type Config struct {
@@ -98,12 +100,6 @@ func main() {
 
 	db.AutoMigrate(&DBApplication{})
 
-	var count int64
-	db.Model(&DBApplication{}).Count(&count)
-	if count == 0 {
-		initDB(db)
-	}
-
 	var configFile string
 	flag.StringVar(&configFile, "c", "", "Config file")
 	flag.Parse()
@@ -121,6 +117,14 @@ func main() {
 	err = yaml.Unmarshal(configFileContent, &config)
 	if err != nil {
 		log.Fatalf("Error parsing YAML: %s", err.Error())
+	}
+
+	for _, repo := range config.Repos {
+		var count int64
+		db.Model(&DBApplication{}).Where(&DBApplication{Repo: repo}).Count(&count)
+		if count == 0 {
+			initDB(db, repo)
+		}
 	}
 
 	options := xmpp.Options{
@@ -155,13 +159,17 @@ func main() {
 
 	ticker := time.NewTicker(15 * time.Minute)
 
-	wg.Add(1)
-	go checkUpdates(&wg, db, client, &config)
+	for _, repo := range config.Repos {
+		wg.Add(1)
+		go checkUpdates(&wg, db, client, &config, repo)
+	}
 	wg.Add(1)
 	go func() {
 		for range ticker.C {
-			wg.Add(1)
-			go checkUpdates(&wg, db, client, &config)
+			for _, repo := range config.Repos {
+				wg.Add(1)
+				go checkUpdates(&wg, db, client, &config, repo)
+			}
 		}
 		wg.Done()
 	}()
@@ -169,24 +177,26 @@ func main() {
 	wg.Wait()
 }
 
-func initDB(db *gorm.DB) {
+func initDB(db *gorm.DB, repo string) {
 	log.Print("Init DB from index...")
 
-	fdroid, err := getIndex()
-	if err.(net.Error).Temporary() {
-		log.Fatal("Could not init DB because of timeout, please restart later")
+	fdroid, err := getIndex(repo)
+	if err != nil {
+		if err.(net.Error).Temporary() {
+			log.Fatal("Could not init DB because of timeout, please restart later")
+		}
 	}
 	appMap := make(map[string]Application)
 	for _, app := range fdroid.Applications {
 		appMap[app.ID] = app
 	}
-	saveNewApps(appMap, db)
+	saveNewApps(appMap, db, repo)
 }
 
-func checkUpdates(wg *sync.WaitGroup, db *gorm.DB, client *xmpp.Client, config *Config) {
+func checkUpdates(wg *sync.WaitGroup, db *gorm.DB, client *xmpp.Client, config *Config, repo string) {
 	log.Print("Starting update check...")
 
-	fdroid, err := getIndex()
+	fdroid, err := getIndex(repo)
 	if err != nil {
 		if err, ok := err.(net.Error); ok && err.Temporary() {
 			return
@@ -199,7 +209,7 @@ func checkUpdates(wg *sync.WaitGroup, db *gorm.DB, client *xmpp.Client, config *
 
 	appIdList := fdroid.AppIDList()
 
-	db.Where("app_id IN ? ", appIdList).Find(&knownApps)
+	db.Where(&DBApplication{Repo: repo}).Where("app_id IN ? ", appIdList).Find(&knownApps)
 
 	repoApps := make(map[string]Application)
 	var updatedApps []DBApplication
@@ -227,7 +237,7 @@ func checkUpdates(wg *sync.WaitGroup, db *gorm.DB, client *xmpp.Client, config *
 
 	var addedApps []*DBApplication
 	if len(repoApps) > 0 {
-		addedApps = saveNewApps(repoApps, db)
+		addedApps = saveNewApps(repoApps, db, repo)
 	}
 
 	log.Print("Found all new apps")
@@ -269,11 +279,18 @@ func checkUpdates(wg *sync.WaitGroup, db *gorm.DB, client *xmpp.Client, config *
 	wg.Done()
 }
 
-func getIndex() (Fdroid, error) {
-	resp, err := http.Get("https://f-droid.org/repo/index.xml")
+func getIndex(repo string) (Fdroid, error) {
+	repoURL, err := url.Parse(repo)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+	repoURL.RawQuery = ""
+	repoURL.Path += "/index.xml"
+	log.Printf("Getting %s", repoURL.String())
+	resp, err := http.Get(repoURL.String())
 	if err != nil {
 		if err, ok := err.(net.Error); ok && err.Temporary() {
-			log.Printf("Temporary error reaching %s", "https://f-droid.org/repo/index.xml")
+			log.Printf("Temporary error reaching %s", repoURL.String())
 			return Fdroid{}, err
 		} else {
 			return Fdroid{}, err
@@ -291,7 +308,7 @@ func getIndex() (Fdroid, error) {
 	return fdroid, nil
 }
 
-func saveNewApps(newApps map[string]Application, db *gorm.DB) (addedApps []*DBApplication) {
+func saveNewApps(newApps map[string]Application, db *gorm.DB, repo string) (addedApps []*DBApplication) {
 	for key, app := range newApps {
 		log.Printf("Processing %s for DB save", key)
 		dbApp := DBApplication{
@@ -299,6 +316,7 @@ func saveNewApps(newApps map[string]Application, db *gorm.DB) (addedApps []*DBAp
 			Name:        app.Name,
 			Version:     app.Version,
 			VersionCode: app.VersionCode,
+			Repo:        repo,
 		}
 		addedApps = append(addedApps, &dbApp)
 	}
