@@ -251,7 +251,8 @@ func checkUpdates(wg *sync.WaitGroup, db *gorm.DB, client *xmpp.Client, config *
 
 	var builder strings.Builder
 
-	builder.WriteString(fmt.Sprintf("*⟳ %d apps added, %d updated at f-droid.org*\n\n", len(addedApps), len(updatedApps)))
+	repoURL, _ := url.Parse(repo)
+	builder.WriteString(fmt.Sprintf("*⟳ %d apps added, %d updated at %s*\n\n", len(addedApps), len(updatedApps), repoURL.Host))
 	if len(addedApps) > 0 {
 		builder.WriteString(fmt.Sprintf("*Added (%d)*\n", len(addedApps)))
 		for _, app := range addedApps {
