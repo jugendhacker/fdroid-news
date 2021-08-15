@@ -38,6 +38,9 @@ import (
 )
 
 type Fdroid struct {
+	Repo struct {
+		Name string `xml:"name,attr"`
+	} `xml:"repo"`
 	Applications []Application `xml:"application"`
 }
 
@@ -251,8 +254,7 @@ func checkUpdates(wg *sync.WaitGroup, db *gorm.DB, client *xmpp.Client, config *
 
 	var builder strings.Builder
 
-	repoURL, _ := url.Parse(repo)
-	builder.WriteString(fmt.Sprintf("*⟳ %d apps added, %d updated at %s*\n\n", len(addedApps), len(updatedApps), repoURL.Host))
+	builder.WriteString(fmt.Sprintf("*⟳ %d apps added, %d updated at %s*\n\n", len(addedApps), len(updatedApps), fdroid.Repo.Name))
 	if len(addedApps) > 0 {
 		builder.WriteString(fmt.Sprintf("*Added (%d)*\n", len(addedApps)))
 		for _, app := range addedApps {
