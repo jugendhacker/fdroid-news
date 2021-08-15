@@ -20,6 +20,7 @@ package main
 
 import (
 	"encoding/xml"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -30,6 +31,7 @@ import (
 	"time"
 
 	"github.com/mattn/go-xmpp"
+	"gopkg.in/yaml.v3"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -75,6 +77,17 @@ type DBApplication struct {
 	VersionCode int
 }
 
+type Config struct {
+	XMPP struct {
+		Username string
+		Host     string
+		Password string
+		MUC      string
+		Nick     string
+	}
+	Repos []string `yaml:",flow"`
+}
+
 func main() {
 	db, err := gorm.Open(sqlite.Open("fdroid-news.sqlite"), &gorm.Config{
 		PrepareStmt: true,
@@ -91,10 +104,29 @@ func main() {
 		initDB(db)
 	}
 
+	var configFile string
+	flag.StringVar(&configFile, "c", "", "Config file")
+	flag.Parse()
+
+	if configFile == "" {
+		log.Fatal("Please provide a config file using the -c flag")
+	}
+
+	configFileContent, err := ioutil.ReadFile(configFile)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	var config Config
+	err = yaml.Unmarshal(configFileContent, &config)
+	if err != nil {
+		log.Fatalf("Error parsing YAML: %s", err.Error())
+	}
+
 	options := xmpp.Options{
-		Host:     "example.org:5223",
-		User:     "feedbot@example.org",
-		Password: "examplePassword",
+		Host:     config.XMPP.Host,
+		User:     config.XMPP.Username,
+		Password: config.XMPP.Password,
 	}
 	client, err := options.NewClient()
 	if err != nil {
@@ -103,7 +135,7 @@ func main() {
 
 	go processIncommingStanzas(client)
 
-	_, err = client.JoinMUCNoHistory("newsbot-pg@conference.jugendhacker.de", "News")
+	_, err = client.JoinMUCNoHistory(config.XMPP.MUC, config.XMPP.Nick)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
@@ -116,7 +148,7 @@ func main() {
 	go func() {
 		for range pingTicker.C {
 			wg.Add(1)
-			doPings(client, &wg)
+			doPings(client, &wg, &config)
 		}
 		wg.Done()
 	}()
@@ -124,12 +156,12 @@ func main() {
 	ticker := time.NewTicker(15 * time.Minute)
 
 	wg.Add(1)
-	go checkUpdates(&wg, db, client)
+	go checkUpdates(&wg, db, client, &config)
 	wg.Add(1)
 	go func() {
 		for range ticker.C {
 			wg.Add(1)
-			go checkUpdates(&wg, db, client)
+			go checkUpdates(&wg, db, client, &config)
 		}
 		wg.Done()
 	}()
@@ -151,7 +183,7 @@ func initDB(db *gorm.DB) {
 	saveNewApps(appMap, db)
 }
 
-func checkUpdates(wg *sync.WaitGroup, db *gorm.DB, client *xmpp.Client) {
+func checkUpdates(wg *sync.WaitGroup, db *gorm.DB, client *xmpp.Client, config *Config) {
 	log.Print("Starting update check...")
 
 	fdroid, err := getIndex()
@@ -226,7 +258,7 @@ func checkUpdates(wg *sync.WaitGroup, db *gorm.DB, client *xmpp.Client) {
 	log.Print(builder.String())
 
 	_, err = client.Send(xmpp.Chat{
-		Remote: "newsbot-pg@conference.jugendhacker.de",
+		Remote: config.XMPP.MUC,
 		Type:   "groupchat",
 		Text:   builder.String(),
 	})
@@ -277,13 +309,13 @@ func saveNewApps(newApps map[string]Application, db *gorm.DB) (addedApps []*DBAp
 	return
 }
 
-func doPings(client *xmpp.Client, wg *sync.WaitGroup) {
+func doPings(client *xmpp.Client, wg *sync.WaitGroup, config *Config) {
 	err := client.PingC2S("", "")
 	if err != nil {
 		log.Fatalf("C2S ping failed with: %s", err.Error())
 	}
 
-	err = client.PingC2S("", "newsbot-pg@conference.jugendhacker.de/News")
+	err = client.PingC2S("", config.XMPP.MUC+"/"+config.XMPP.Nick)
 	if err != nil {
 		log.Fatalf("MUC ping failed with %s", err.Error())
 	}

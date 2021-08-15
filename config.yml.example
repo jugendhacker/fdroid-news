@@ -1,0 +1,7 @@
+---
+xmpp:
+  username: feedbot@example.org
+  host: "example.org:5223"
+  password: supersecretpassword
+  muc: android@muc.example.org
+  nick: Talking-Bot
