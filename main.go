@@ -352,7 +352,6 @@ func processIncommingStanzas(client *xmpp.Client) {
 
 		switch value := stanza.(type) {
 		case xmpp.IQ:
-			log.Printf("Incomming iq, type: %s, query: %s, id: %s, from: %s", value.Type, string(value.Query), value.ID, value.From)
 			if value.Type == "get" {
 				err := xml.Unmarshal(value.Query, &PingRequest{})
 				if err == nil {
@@ -377,6 +376,8 @@ func processIncommingStanzas(client *xmpp.Client) {
 					}
 				}
 			}
+		default:
+			break
 		}
 	}
 }
