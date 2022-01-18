@@ -53,10 +53,16 @@ func (fdroid *Fdroid) AppIDList() []string {
 }
 
 type Application struct {
-	ID          string `xml:"id"`
-	Name        string `xml:"name"`
-	Version     string `xml:"marketversion"`
-	VersionCode int    `xml:"marketvercode"`
+	ID          string    `xml:"id"`
+	Name        string    `xml:"name"`
+	Version     string    `xml:"marketversion"`
+	VersionCode int       `xml:"marketvercode"`
+	Packages    []Package `xml:"package"`
+}
+
+type Package struct {
+	Version     string `xml:"version"`
+	VersionCode int    `xml:"versioncode"`
 }
 
 type PingRequest struct {
