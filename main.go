@@ -205,6 +205,7 @@ func checkUpdates(wg *sync.WaitGroup, db *gorm.DB, client *xmpp.Client, config *
 			return
 		} else {
 			log.Print(err.Error())
+			return
 		}
 	}
 
@@ -306,7 +307,9 @@ func getIndex(repo string) (Fdroid, error) {
 		log.Fatal(err.Error())
 	}
 
-	xml.Unmarshal(b, &fdroid)
+	if err = xml.Unmarshal(b, &fdroid); err != nil {
+		return Fdroid{}, err
+	}
 
 	return fdroid, nil
 }
