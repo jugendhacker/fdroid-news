@@ -40,7 +40,7 @@ with lib;
       cfg = config.services.fdroid-news;
       fdroid-news = pkgs.callPackage ./default.nix {};
     in mkIf cfg.enable {
-      environment.etc."fdroid-news/config.yml".text = pkgs.lib.generators.toYAML {} (removeAttrs cfg ["enable"]);
+      environment.etc."fdroid-news/config.yml".source = (pkgs.formats.yaml {}).generate "config.yml" (removeAttrs cfg ["enable"]);
       systemd.services.fdroid-news = {
         description = "fdroid-news bot";
         wantedBy = [ "multi-user.target" ];
