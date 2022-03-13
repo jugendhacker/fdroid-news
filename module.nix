@@ -48,7 +48,8 @@ with lib;
         serviceConfig = {
           Type = "simple";
           ExecStart = "${fdroid-news}/bin/fdroid-news -c /etc/fdroid-news/config.yml";
-          StateDirectory= "fdroid-news";
+          StateDirectory = "fdroid-news";
+          ConfigurationDirectory = "fdroid-news";
           WorkingDirectory = "/var/lib/fdroid-news";
           Restart = "always";
 
