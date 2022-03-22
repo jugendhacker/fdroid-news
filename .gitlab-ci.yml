@@ -16,3 +16,4 @@ sast:
 
 include:
   - template: Security/SAST.gitlab-ci.yml
+  - template: Security/License-Scanning.gitlab-ci.yml
