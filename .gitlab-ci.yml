@@ -1,4 +1,5 @@
-Build docker image:
+docker image:
+  stage: build
   image: docker:latest
   services:
     - docker:dind
@@ -6,3 +7,11 @@ Build docker image:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
     - docker build -t $CI_REGISTRY_IMAGE .
     - docker push $CI_REGISTRY_IMAGE
+
+sast:
+  variables:
+    SAST_EXCLUDED_ANALYZERS: bandit, brakeman, eslint, flawfinder, kubesec, nodejs-scan,
+                phpcs-security-audit, pmd-apex, security-code-scan, sobelow, spotbugs
+  stage: test
+  include:
+    - template: Security/SAST.gitlab-ci.yml
