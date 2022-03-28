@@ -52,6 +52,7 @@ with lib;
           ConfigurationDirectory = "fdroid-news";
           WorkingDirectory = "/var/lib/fdroid-news";
           Restart = "always";
+          RestartSec = "5min";
 
           DynamicUser = true;
           NoNewPriviliges = true;
