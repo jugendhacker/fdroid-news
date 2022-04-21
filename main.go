@@ -107,7 +107,9 @@ func main() {
 		log.Fatal(err.Error())
 	}
 
-	db.AutoMigrate(&DBApplication{})
+	if err := db.AutoMigrate(&DBApplication{}); err != nil {
+		log.Fatalf("Error migrating db: %v", err)
+	}
 
 	var configFile string
 	flag.StringVar(&configFile, "c", "", "Config file")
@@ -365,7 +367,9 @@ func processIncommingStanzas(client *xmpp.Client) {
 				err := xml.Unmarshal(value.Query, &PingRequest{})
 				if err == nil {
 					log.Print("Sending ping response")
-					client.SendResultPing(value.ID, value.From)
+					if err := client.SendResultPing(value.ID, value.From); err != nil {
+						log.Printf("Error during ping response: %v", err)
+					}
 				} else {
 					iqError := IQErrorServiceUnavailable{
 						Type:  "cancel",
