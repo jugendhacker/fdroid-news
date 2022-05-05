@@ -1,10 +1,11 @@
 # vim: set tabstop=2 shiftwidth=2 expandtab:
 {pkgs ? import <nixpkgs> {}}:
-with pkgs;
 
-buildGoModule {
-  name = "fdroid-news";
-  pname = self.name;
+let
+  package-name = "fdroid-news";
+in pkgs.buildGoModule rec{
+  name = "${package-name}";
+  pname = "${package-name}";
   src = ./.;
-  vendorSha256 = "sha256-FlBUN8B1U+ELpia5R/5oNflD/IMWIQ+mXhdP2iaWkjk=";
+  vendorSha256 = "sha256-ZuKhM+grt1oATUf0MAYu95ZM1aqwlykdwxeEs5PrRIQ=";
 }
