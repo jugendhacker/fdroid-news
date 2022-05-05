@@ -7,5 +7,5 @@ in pkgs.buildGoModule rec{
   name = "${package-name}";
   pname = "${package-name}";
   src = ./.;
-  vendorSha256 = "sha256-ZuKhM+grt1oATUf0MAYu95ZM1aqwlykdwxeEs5PrRIQ=";
+  vendorSha256 = "sha256-AQS9Q+5u2lVW20nQLQZljaZeadvuRSfSKDBftfucKt8=";
 }
