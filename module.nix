@@ -1,5 +1,5 @@
 # vim: tabstop=2 shiftwidth=2 expandtab:
-{ lib, pkgs, config, ... }:
+{ lib, pkgs, config, fdroid-news ? { import ./default.nix }, ... }:
 
 with lib;
 {
