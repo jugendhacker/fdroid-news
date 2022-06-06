@@ -30,6 +30,7 @@
     };
 
     packages.x86_64-linux.fdroid-news = pkgs.fdroid-news;
+    defaultPackage.x86_64-linux = pkgs.fdroid-news;
     nixosModules.fdroid-news = {
       imports = [ ./module.nix ];
       nixpkgs.overlays = [ self.overlays.default ];
