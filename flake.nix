@@ -15,13 +15,14 @@
   in
   rec {
     overlays.default = final: prev: {
-      fdroid-news = with final; let
+      fdroid-news = let
         package-name = "fdroid-news";
-      in pkgs.buildGoModule rec{
+      in final.pkgs.buildGo118Module rec{
         name = "${package-name}";
         pname = "${package-name}";
         src = ./.;
-        vendorSha256 = "sha256-AQS9Q+5u2lVW20nQLQZljaZeadvuRSfSKDBftfucKt8=";
+        proxyVendor = true;
+        vendorSha256 = "sha256-68tYbpY5Y0V6rZ2mXnjmSuWcq7/YsI9Pb8bpJ6nzK9E=";
       };
     };
 
