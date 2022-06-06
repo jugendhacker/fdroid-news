@@ -38,7 +38,7 @@ with lib;
   config =
     let
       cfg = config.services.fdroid-news;
-      fdroid-news = pkgs.callPackage ./default.nix {};
+      fdroid-news = pkgs.fdroid-news;
     in mkIf cfg.enable {
       environment.etc."fdroid-news/config.yml".source = (pkgs.formats.yaml {}).generate "config.yml" {xmpp = removeAttrs cfg ["enable" "repos"]; repos = cfg.repos;};
       systemd.services.fdroid-news = {
