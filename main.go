@@ -59,6 +59,18 @@ func (fdroid *Fdroid) AppIDList() []string {
 type Application struct {
 	PackageName string
 	Name        string
+	Localized   struct {
+		Default struct {
+			Name string
+		} `json:"en-US"`
+	}
+}
+
+func (app *Application) GetName() string {
+	if app.Localized.Default.Name != "" {
+		return app.Localized.Default.Name
+	}
+	return app.Name
 }
 
 type Package struct {
@@ -238,7 +250,7 @@ func checkUpdates(wg *sync.WaitGroup, db *gorm.DB, client *xmpp.Client, config *
 		updated := false
 		for _, pack := range packages {
 			if app.VersionCode < pack.VersionCode {
-				app.Name = repoApp.Name
+				app.Name = repoApp.GetName()
 				app.Version = pack.VersionName
 				app.VersionCode = pack.VersionCode
 				updated = true
@@ -352,7 +364,7 @@ func saveNewApps(newApps map[string]Application, db *gorm.DB, repo string, packa
 		}
 		dbApp := DBApplication{
 			AppId:       app.PackageName,
-			Name:        app.Name,
+			Name:        app.GetName(),
 			Version:     latestPackage.VersionName,
 			VersionCode: latestPackage.VersionCode,
 			Repo:        repo,
