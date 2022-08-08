@@ -25,11 +25,12 @@ import (
 	"encoding/xml"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -132,7 +133,7 @@ func main() {
 		log.Fatal("Please provide a config file using the -c flag")
 	}
 
-	configFileContent, err := ioutil.ReadFile(configFile)
+	configFileContent, err := os.ReadFile(configFile)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
@@ -330,7 +331,7 @@ func getIndex(repo string) (Fdroid, error) {
 		}
 	}
 
-	b, err := ioutil.ReadAll(resp.Body)
+	b, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
