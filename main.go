@@ -19,6 +19,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package main
 
 import (
+	"archive/zip"
+	"bytes"
+	"encoding/json"
 	"encoding/xml"
 	"flag"
 	"fmt"
@@ -39,30 +42,28 @@ import (
 
 type Fdroid struct {
 	Repo struct {
-		Name string `xml:"name,attr"`
-	} `xml:"repo"`
-	Applications []Application `xml:"application"`
+		Name string
+	}
+	Apps     []Application
+	Packages map[string][]Package
 }
 
 func (fdroid *Fdroid) AppIDList() []string {
 	var appIDs []string
-	for _, app := range fdroid.Applications {
-		appIDs = append(appIDs, app.ID)
+	for _, app := range fdroid.Apps {
+		appIDs = append(appIDs, app.PackageName)
 	}
 	return appIDs
 }
 
 type Application struct {
-	ID          string    `xml:"id"`
-	Name        string    `xml:"name"`
-	Version     string    `xml:"marketversion"`
-	VersionCode int       `xml:"marketvercode"`
-	Packages    []Package `xml:"package"`
+	PackageName string
+	Name        string
 }
 
 type Package struct {
-	Version     string `xml:"version"`
-	VersionCode int    `xml:"versioncode"`
+	VersionCode int
+	VersionName string
 }
 
 type PingRequest struct {
@@ -198,10 +199,10 @@ func initDB(db *gorm.DB, repo string) {
 		}
 	}
 	appMap := make(map[string]Application)
-	for _, app := range fdroid.Applications {
-		appMap[app.ID] = app
+	for _, app := range fdroid.Apps {
+		appMap[app.PackageName] = app
 	}
-	saveNewApps(appMap, db, repo)
+	saveNewApps(appMap, db, repo, fdroid.Packages)
 }
 
 func checkUpdates(wg *sync.WaitGroup, db *gorm.DB, client *xmpp.Client, config *Config, repo string) {
@@ -224,23 +225,31 @@ func checkUpdates(wg *sync.WaitGroup, db *gorm.DB, client *xmpp.Client, config *
 	db.Where(&DBApplication{Repo: repo}).Where("app_id IN ? ", appIdList).Find(&knownApps)
 
 	repoApps := make(map[string]Application)
-	var updatedApps []DBApplication
-	for _, app := range fdroid.Applications {
-		repoApps[app.ID] = app
+	for _, app := range fdroid.Apps {
+		repoApps[app.PackageName] = app
 	}
 
 	log.Print("Finished fetching apps")
 
+	var updatedApps []DBApplication
 	for _, app := range knownApps {
+		packages := fdroid.Packages[app.AppId]
 		repoApp := repoApps[app.AppId]
-		if app.VersionCode < repoApp.VersionCode {
-			app.Name = repoApp.Name
-			app.Version = repoApp.Version
-			app.VersionCode = repoApp.VersionCode
+		updated := false
+		for _, pack := range packages {
+			if app.VersionCode < pack.VersionCode {
+				app.Name = repoApp.Name
+				app.Version = pack.VersionName
+				app.VersionCode = pack.VersionCode
+				updated = true
+			}
+		}
+		if updated {
 			updatedApps = append(updatedApps, app)
 		}
 		delete(repoApps, app.AppId)
 	}
+
 	if len(updatedApps) > 0 {
 		db.Save(&updatedApps)
 	}
@@ -249,7 +258,7 @@ func checkUpdates(wg *sync.WaitGroup, db *gorm.DB, client *xmpp.Client, config *
 
 	var addedApps []*DBApplication
 	if len(repoApps) > 0 {
-		addedApps = saveNewApps(repoApps, db, repo)
+		addedApps = saveNewApps(repoApps, db, repo, fdroid.Packages)
 	}
 
 	log.Print("Found all new apps")
@@ -259,7 +268,7 @@ func checkUpdates(wg *sync.WaitGroup, db *gorm.DB, client *xmpp.Client, config *
 		return
 	}
 
-	log.Print("Contructing output...")
+	log.Print("Constructing output...")
 
 	var builder strings.Builder
 
@@ -297,7 +306,7 @@ func getIndex(repo string) (Fdroid, error) {
 		log.Fatal(err.Error())
 	}
 	repoURL.RawQuery = ""
-	repoURL.Path += "/index.xml"
+	repoURL.Path += "/index-v1.jar"
 	log.Printf("Getting %s", repoURL.String())
 	resp, err := http.Get(repoURL.String())
 	if err != nil {
@@ -308,28 +317,44 @@ func getIndex(repo string) (Fdroid, error) {
 			return Fdroid{}, err
 		}
 	}
-	var fdroid Fdroid
 
 	b, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
 
-	if err = xml.Unmarshal(b, &fdroid); err != nil {
-		return Fdroid{}, err
+	r, err := zip.NewReader(bytes.NewReader(b), int64(len(b)))
+	if err != nil {
+		log.Fatalf("Error while parsing as zip: %v", err)
+	}
+
+	index, err := r.Open("index-v1.json")
+	if err != nil {
+		log.Fatalf("Error opening index file from zip: %v", err)
+	}
+
+	var fdroid Fdroid
+	if err = json.NewDecoder(index).Decode(&fdroid); err != nil {
+		log.Fatalf("Error deconding json: %v", err)
 	}
 
 	return fdroid, nil
 }
 
-func saveNewApps(newApps map[string]Application, db *gorm.DB, repo string) (addedApps []*DBApplication) {
+func saveNewApps(newApps map[string]Application, db *gorm.DB, repo string, packages map[string][]Package) (addedApps []*DBApplication) {
 	for key, app := range newApps {
 		log.Printf("Processing %s for DB save", key)
+		var latestPackage Package
+		for _, pack := range packages[app.PackageName] {
+			if latestPackage.VersionCode < pack.VersionCode {
+				latestPackage = pack
+			}
+		}
 		dbApp := DBApplication{
-			AppId:       app.ID,
+			AppId:       app.PackageName,
 			Name:        app.Name,
-			Version:     app.Version,
-			VersionCode: app.VersionCode,
+			Version:     latestPackage.VersionName,
+			VersionCode: latestPackage.VersionCode,
 			Repo:        repo,
 		}
 		addedApps = append(addedApps, &dbApp)
