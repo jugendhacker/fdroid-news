@@ -22,7 +22,7 @@
         pname = "${package-name}";
         src = ./.;
         proxyVendor = true;
-        vendorSha256 = "sha256-68tYbpY5Y0V6rZ2mXnjmSuWcq7/YsI9Pb8bpJ6nzK9E=";
+        vendorSha256 = "sha256-gV4ksKHnQLq68QLfNm5m8Y3PxuraeMhg8vn7KSZ92Bw=";
       };
     };
 
