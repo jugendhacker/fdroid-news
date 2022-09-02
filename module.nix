@@ -23,7 +23,7 @@ with lib;
       default = "";
     };
     passwordFile = mkOption {
-      type = types.path;
+      type = types.str;
       description = "Optional password file";
     };
     muc = mkOption {
