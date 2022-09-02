@@ -20,6 +20,11 @@ with lib;
     password = mkOption {
       type = types.str;
       description = "XMPP Password";
+      default = "";
+    };
+    passwordFile = mkOption {
+      type = types.path;
+      description = "Optional password file";
     };
     muc = mkOption {
       type = types.str;
@@ -47,7 +52,7 @@ with lib;
         after    = [ "network.target" ];
         serviceConfig = {
           Type = "simple";
-          ExecStart = "${fdroid-news}/bin/fdroid-news -c /etc/fdroid-news/config.yml";
+          ExecStart = "${fdroid-news}/bin/fdroid-news -c /etc/fdroid-news/config.yml" + optionalString (cfg.passwordFile != null) " -p ${cfg.passwordFile}";
           StateDirectory = "fdroid-news";
           ConfigurationDirectory = "fdroid-news";
           WorkingDirectory = "/var/lib/fdroid-news";
