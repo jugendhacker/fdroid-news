@@ -125,8 +125,9 @@ func main() {
 		log.Fatalf("Error migrating db: %v", err)
 	}
 
-	var configFile string
+	var configFile, passwordFile string
 	flag.StringVar(&configFile, "c", "", "Config file")
+	flag.StringVar(&passwordFile, "p", "", "Optionally pass a file that only contains the password for the XMPP user")
 	flag.Parse()
 
 	if configFile == "" {
@@ -142,6 +143,16 @@ func main() {
 	err = yaml.Unmarshal(configFileContent, &config)
 	if err != nil {
 		log.Fatalf("Error parsing YAML: %s", err.Error())
+	}
+
+	if config.XMPP.Password == "" && passwordFile != "" {
+		password, err := os.ReadFile(passwordFile)
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+		config.XMPP.Password = string(password)
+	} else {
+		log.Fatalf("Please provide XMPP password either via config or password file")
 	}
 
 	for _, repo := range config.Repos {
