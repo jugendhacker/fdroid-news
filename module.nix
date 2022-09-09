@@ -38,6 +38,12 @@ with lib;
       type = types.listOf types.str;
       description = "List of repos the bot should monitor";
     };
+    user = mkOption {
+      type = types.str;
+    };
+    group = mkOption {
+      type = types.str;
+    }
   };
 
   config =
@@ -59,9 +65,10 @@ with lib;
           Restart = "always";
           RestartSec = "5min";
 
-          DynamicUser = true;
+          User = cfg.user;
+          Group = cfg.group;
           NoNewPriviliges = true;
-          ProtectHome = true;
+          ProtectHome = "tmpfs";
           ProtectSystem = "strict";
         };
       };
