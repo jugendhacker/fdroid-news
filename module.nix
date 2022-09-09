@@ -43,7 +43,7 @@ with lib;
     };
     group = mkOption {
       type = types.str;
-    }
+    };
   };
 
   config =
