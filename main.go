@@ -31,6 +31,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -113,6 +114,10 @@ type Config struct {
 	Repos []string `yaml:",flow"`
 }
 
+const aboutMsg = `Hi I'm a bot repoting about updates in F-Droid repos.
+
+I was made by j.r. My code is licensed under AGPL-3.0-or-later and could be found at https://git.sr.ht/~j-r/fdroid-news`
+
 func main() {
 	db, err := gorm.Open(sqlite.Open("fdroid-news.sqlite"), &gorm.Config{
 		PrepareStmt: true,
@@ -173,7 +178,7 @@ func main() {
 		log.Fatal(err.Error())
 	}
 
-	go processIncommingStanzas(client)
+	go processIncommingStanzas(client, config)
 
 	_, err = client.JoinMUCNoHistory(config.XMPP.MUC, config.XMPP.Nick)
 	if err != nil {
@@ -403,7 +408,7 @@ func doPings(client *xmpp.Client, wg *sync.WaitGroup, config *Config) {
 	wg.Done()
 }
 
-func processIncommingStanzas(client *xmpp.Client) {
+func processIncommingStanzas(client *xmpp.Client, config Config) {
 	for {
 		stanza, err := client.Recv()
 		if err != nil {
@@ -435,6 +440,20 @@ func processIncommingStanzas(client *xmpp.Client) {
 					_, err = client.RawInformation(value.To, value.From, value.ID, "error", string(response))
 					if err != nil {
 						log.Fatal(err.Error())
+					}
+				}
+			}
+		case xmpp.Chat:
+			if value.Type == "groupchat" {
+				r, _ := regexp.Compile(config.XMPP.Nick)
+				if r.Match([]byte(value.Text)) {
+					_, err := client.Send(xmpp.Chat{
+						Remote: strings.Split(value.Remote, "/")[0],
+						Type:   "groupchat",
+						Text:   aboutMsg,
+					})
+					if err != nil {
+						log.Printf("Error sending aboutMsg: %v", err)
 					}
 				}
 			}
