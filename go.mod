@@ -1,13 +1,13 @@
 module git.sr.ht/~j-r/fdroid-news
 
-go 1.19
+go 1.18
 
 require (
-	github.com/mattn/go-sqlite3 v1.14.14 // indirect
+	github.com/mattn/go-sqlite3 v1.14.15 // indirect
 	github.com/mattn/go-xmpp v0.0.0-20220712221724-2eb234970ce7
 	gopkg.in/yaml.v3 v3.0.1
-	gorm.io/driver/sqlite v1.3.6
-	gorm.io/gorm v1.23.8
+	gorm.io/driver/sqlite v1.4.2
+	gorm.io/gorm v1.24.0
 )
 
 require (
