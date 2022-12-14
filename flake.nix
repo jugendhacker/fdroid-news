@@ -17,12 +17,12 @@
     overlays.default = final: prev: {
       fdroid-news = let
         package-name = "fdroid-news";
-      in final.pkgs.buildGo118Module rec{
+      in final.pkgs.buildGo119Module rec{
         name = "${package-name}";
         pname = "${package-name}";
         src = ./.;
         proxyVendor = true;
-        vendorSha256 = "sha256-D5zTWPm8sJKFfCslAh4BdgUnnktEMh6M77FT/yoYgXo=";
+        vendorSha256 = "sha256-xN451GXH5f8BmQ9i+oH1ZIWdXYgxQ90Qu9+T6kxArNs=";
       };
     };
 
