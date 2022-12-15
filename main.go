@@ -114,7 +114,7 @@ type Config struct {
 	Repos []string `yaml:",flow"`
 }
 
-const aboutMsg = `Hi I'm a bot repoting about updates in F-Droid repos.
+const aboutMsg = `Hi I'm a bot reporting about updates in F-Droid repos.
 
 I was made by j.r. My code is licensed under AGPL-3.0-or-later and could be found at https://git.sr.ht/~j-r/fdroid-news`
 
