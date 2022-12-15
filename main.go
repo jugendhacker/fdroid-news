@@ -156,7 +156,7 @@ func main() {
 			log.Fatal(err.Error())
 		}
 		config.XMPP.Password = string(password)
-	} else {
+	} else if config.XMPP.Password == "" && passwordFile == "" {
 		log.Fatalf("Please provide XMPP password either via config or password file")
 	}
 
