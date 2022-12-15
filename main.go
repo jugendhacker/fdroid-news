@@ -445,15 +445,21 @@ func processIncommingStanzas(client *xmpp.Client, config Config) {
 			}
 		case xmpp.Chat:
 			if value.Type == "groupchat" {
-				r, _ := regexp.Compile(config.XMPP.Nick)
-				if r.Match([]byte(value.Text)) {
-					_, err := client.Send(xmpp.Chat{
-						Remote: strings.Split(value.Remote, "/")[0],
-						Type:   "groupchat",
-						Text:   aboutMsg,
-					})
-					if err != nil {
-						log.Printf("Error sending aboutMsg: %v", err)
+				remoteSplit := strings.Split(value.Remote, "/")
+				if len(remoteSplit) <= 1 {
+					break
+				}
+				if remoteSplit[1] != config.XMPP.Nick {
+					r, _ := regexp.Compile(config.XMPP.Nick)
+					if r.Match([]byte(value.Text)) {
+						_, err := client.Send(xmpp.Chat{
+							Remote: strings.Split(value.Remote, "/")[0],
+							Type:   "groupchat",
+							Text:   aboutMsg,
+						})
+						if err != nil {
+							log.Printf("Error sending aboutMsg: %v", err)
+						}
 					}
 				}
 			}
