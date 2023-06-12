@@ -3,7 +3,7 @@
   description = "fdroid-news XMPP bot";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/release-22.11";
+    nixpkgs.url = "github:nixos/nixpkgs/release-23.05";
   };
 
   outputs = inputs@{ self, nixpkgs }:
@@ -17,12 +17,12 @@
     overlays.default = final: prev: {
       fdroid-news = let
         package-name = "fdroid-news";
-      in final.pkgs.buildGo119Module rec{
+      in final.pkgs.buildGo120Module rec{
         name = "${package-name}";
         pname = "${package-name}";
         src = ./.;
         proxyVendor = true;
-        vendorSha256 = "sha256-xN451GXH5f8BmQ9i+oH1ZIWdXYgxQ90Qu9+T6kxArNs=";
+        vendorSha256 = "sha256-So9IO9Yu73euxQkQkQFRP+dnj5mLCgAFMljsm86E0bM=";
       };
     };
 
