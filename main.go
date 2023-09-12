@@ -32,6 +32,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -300,6 +301,13 @@ func checkUpdates(wg *sync.WaitGroup, db *gorm.DB, client *xmpp.Client, config *
 	log.Print("Constructing output...")
 
 	var builder strings.Builder
+
+	sort.Slice(addedApps, func(i, j int) bool {
+		return addedApps[i].Name < addedApps[j].Name
+	})
+	sort.Slice(updatedApps, func(i, j int) bool {
+		return updatedApps[i].Name < updatedApps[j].Name
+	})
 
 	builder.WriteString(fmt.Sprintf("*⟳ %d apps added, %d updated at %s*\n\n", len(addedApps), len(updatedApps), fdroid.Repo.Name))
 	if len(addedApps) > 0 {
