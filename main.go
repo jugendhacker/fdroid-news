@@ -26,7 +26,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -38,6 +37,8 @@ import (
 	"time"
 
 	"github.com/mattn/go-xmpp"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -128,45 +129,53 @@ const aboutMsg = `Hi I'm a bot reporting about updates in F-Droid repos.
 I was made by j.r. My code is licensed under AGPL-3.0-or-later and could be found at https://git.sr.ht/~j-r/fdroid-news`
 
 func main() {
+	var configFile, passwordFile string
+	var debugMode bool
+	flag.StringVar(&configFile, "c", "", "Config file")
+	flag.StringVar(&passwordFile, "p", "", "Optionally pass a file that only contains the password for the XMPP user")
+	flag.BoolVar(&debugMode, "v", false, "Print intensive log information")
+	flag.Parse()
+
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout, NoColor: true, TimeFormat: time.RFC3339})
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	if debugMode {
+		zerolog.SetGlobalLevel(zerolog.TraceLevel)
+	}
+
 	db, err := gorm.Open(sqlite.Open("fdroid-news.sqlite"), &gorm.Config{
 		PrepareStmt: true,
 	})
 	if err != nil {
-		log.Fatal(err.Error())
+		log.Fatal().Stack().Err(err).Msg("Erorr opening database")
 	}
 
 	if err := db.AutoMigrate(&DBApplication{}); err != nil {
-		log.Fatalf("Error migrating db: %v", err)
+		log.Fatal().Stack().Err(err).Msg("Error migrating db")
 	}
 
-	var configFile, passwordFile string
-	flag.StringVar(&configFile, "c", "", "Config file")
-	flag.StringVar(&passwordFile, "p", "", "Optionally pass a file that only contains the password for the XMPP user")
-	flag.Parse()
-
 	if configFile == "" {
-		log.Fatal("Please provide a config file using the -c flag")
+		log.Fatal().Msg("Please provide a config file using the -c flag")
 	}
 
 	configFileContent, err := os.ReadFile(configFile)
 	if err != nil {
-		log.Fatal(err.Error())
+		log.Fatal().Stack().Err(err).Msg("Error reading config file")
 	}
 
 	var config Config
 	err = yaml.Unmarshal(configFileContent, &config)
 	if err != nil {
-		log.Fatalf("Error parsing YAML: %s", err.Error())
+		log.Fatal().Stack().Err(err).Msg("Error parsing YAML")
 	}
 
 	if config.XMPP.Password == "" && passwordFile != "" {
 		password, err := os.ReadFile(passwordFile)
 		if err != nil {
-			log.Fatal(err.Error())
+			log.Fatal().Stack().Err(err).Msg("Cannot open password file")
 		}
 		config.XMPP.Password = string(password)
 	} else if config.XMPP.Password == "" && passwordFile == "" {
-		log.Fatalf("Please provide XMPP password either via config or password file")
+		log.Fatal().Msg("Please provide XMPP password either via config or password file")
 	}
 
 	for _, repo := range config.Repos {
@@ -184,14 +193,14 @@ func main() {
 	}
 	client, err := options.NewClient()
 	if err != nil {
-		log.Fatal(err.Error())
+		log.Fatal().Stack().Err(err).Msg("Can't create XMPP client from options")
 	}
 
 	go processIncommingStanzas(client, config)
 
 	_, err = client.JoinMUCNoHistory(config.XMPP.MUC, config.XMPP.Nick)
 	if err != nil {
-		log.Fatal(err.Error())
+		log.Fatal().Stack().Err(err).Msg("Unable to join MUC")
 	}
 
 	var wg sync.WaitGroup
@@ -228,11 +237,11 @@ func main() {
 }
 
 func initDB(db *gorm.DB, repo string) {
-	log.Print("Init DB from index...")
+	log.Info().Msg("First time initialising database from index")
 
 	fdroid, err := getIndex(repo)
 	if err != nil {
-		log.Fatalf("Could not init DB: %v", err)
+		log.Fatal().Stack().Err(err).Msg("Could not init DB")
 	}
 	appMap := make(map[string]Application)
 	for _, app := range fdroid.Apps {
@@ -242,16 +251,12 @@ func initDB(db *gorm.DB, repo string) {
 }
 
 func checkUpdates(wg *sync.WaitGroup, db *gorm.DB, client *xmpp.Client, config *Config, repo string) {
-	log.Print("Starting update check...")
+	log.Debug().Msg("Starting update check")
 
 	fdroid, err := getIndex(repo)
 	if err != nil {
-		if err, ok := err.(net.Error); ok && err.Temporary() {
-			return
-		} else {
-			log.Print(err.Error())
-			return
-		}
+		log.Warn().Err(err).Msg("")
+		return
 	}
 
 	var knownApps []DBApplication
@@ -265,7 +270,7 @@ func checkUpdates(wg *sync.WaitGroup, db *gorm.DB, client *xmpp.Client, config *
 		repoApps[app.PackageName] = app
 	}
 
-	log.Print("Finished fetching apps")
+	log.Debug().Msg("Finished fetching apps")
 
 	var updatedApps []DBApplication
 	for _, app := range knownApps {
@@ -290,21 +295,21 @@ func checkUpdates(wg *sync.WaitGroup, db *gorm.DB, client *xmpp.Client, config *
 		db.Save(&updatedApps)
 	}
 
-	log.Print("Found all updated apps")
+	log.Debug().Msg("Found all updated apps")
 
 	var addedApps []*DBApplication
 	if len(repoApps) > 0 {
 		addedApps = saveNewApps(repoApps, db, repo, fdroid.Packages)
 	}
 
-	log.Print("Found all new apps")
+	log.Debug().Msg("Found all new apps")
 
 	if len(addedApps) == 0 && len(updatedApps) == 0 {
-		log.Print("No new apps")
+		log.Debug().Msg("No new apps")
 		return
 	}
 
-	log.Print("Constructing output...")
+	log.Debug().Msg("Constructing output...")
 
 	var builder strings.Builder
 
@@ -329,7 +334,7 @@ func checkUpdates(wg *sync.WaitGroup, db *gorm.DB, client *xmpp.Client, config *
 		}
 	}
 
-	log.Print(builder.String())
+	log.Debug().Msg(builder.String())
 
 	_, err = client.Send(xmpp.Chat{
 		Remote: config.XMPP.MUC,
@@ -337,7 +342,7 @@ func checkUpdates(wg *sync.WaitGroup, db *gorm.DB, client *xmpp.Client, config *
 		Text:   builder.String(),
 	})
 	if err != nil {
-		log.Fatal(err.Error())
+		log.Fatal().Stack().Err(err).Msg("Error sending groupchat message")
 	}
 
 	wg.Done()
@@ -346,7 +351,7 @@ func checkUpdates(wg *sync.WaitGroup, db *gorm.DB, client *xmpp.Client, config *
 func getIndex(repo string) (Fdroid, error) {
 	repoURL, err := url.Parse(repo)
 	if err != nil {
-		log.Fatal(err.Error())
+		log.Fatal().Stack().Err(err).Msg("Can't parse repo URL")
 	}
 	repoURL.RawQuery = ""
 	repoURL.Path += "/index-v1.jar"
@@ -363,22 +368,22 @@ func getIndex(repo string) (Fdroid, error) {
 
 	b, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatal(err.Error())
+		log.Fatal().Stack().Err(err).Msg("Could not read response")
 	}
 
 	r, err := zip.NewReader(bytes.NewReader(b), int64(len(b)))
 	if err != nil {
-		log.Fatalf("Error while parsing as zip: %v", err)
+		log.Fatal().Stack().Err(err).Msg("Error while parsing as zip")
 	}
 
 	index, err := r.Open("index-v1.json")
 	if err != nil {
-		log.Fatalf("Error opening index file from zip: %v", err)
+		log.Fatal().Stack().Err(err).Msg("Error opening index file from zip")
 	}
 
 	var fdroid Fdroid
 	if err = json.NewDecoder(index).Decode(&fdroid); err != nil {
-		log.Fatalf("Error deconding json: %v", err)
+		log.Fatal().Stack().Err(err).Msg("Error deconding json")
 	}
 
 	return fdroid, nil
@@ -412,12 +417,12 @@ func saveNewApps(newApps map[string]Application, db *gorm.DB, repo string, packa
 func doPings(client *xmpp.Client, wg *sync.WaitGroup, config *Config) {
 	err := client.PingC2S("", "")
 	if err != nil {
-		log.Fatalf("C2S ping failed with: %s", err.Error())
+		log.Warn().Stack().Err(err).Msg("C2S ping failed")
 	}
 
 	err = client.PingC2S("", config.XMPP.MUC+"/"+config.XMPP.Nick)
 	if err != nil {
-		log.Fatalf("MUC ping failed with %s", err.Error())
+		log.Warn().Stack().Err(err).Msg("MUC ping failed")
 	}
 	wg.Done()
 }
@@ -426,7 +431,8 @@ func processIncommingStanzas(client *xmpp.Client, config Config) {
 	for {
 		stanza, err := client.Recv()
 		if err != nil {
-			log.Fatal(err.Error())
+			log.Error().Stack().Err(err).Msg("Can't receive stanzas")
+			return
 		}
 
 		switch value := stanza.(type) {
@@ -434,14 +440,15 @@ func processIncommingStanzas(client *xmpp.Client, config Config) {
 			if value.Type == "get" {
 				err := xml.Unmarshal(value.Query, &PingRequest{})
 				if err == nil {
-					log.Print("Sending ping response")
+					log.Debug().Msg("Sending ping response")
 					if err := client.SendResultPing(value.ID, value.From); err != nil {
-						log.Printf("Error during ping response: %v", err)
+						log.Error().Stack().Err(err).Msg("Error during ping response")
+						continue
 					}
 				} else if err := xml.Unmarshal(value.Query, &IQErrorNotAcceptable{}); err == nil {
 					if value.From == fmt.Sprintf("%s/%s", config.XMPP.MUC, config.XMPP.Nick) {
 						client.JoinMUCNoHistory(config.XMPP.MUC, config.XMPP.Nick)
-						log.Println("Rejoined MUC because of failed ping")
+						log.Debug().Msg("Rejoined MUC because ping failed")
 					}
 				} else {
 					iqError := IQErrorServiceUnavailable{
@@ -451,14 +458,17 @@ func processIncommingStanzas(client *xmpp.Client, config Config) {
 
 					response, err := xml.Marshal(iqError)
 					if err != nil {
-						log.Fatal(err.Error())
+						log.Error().Stack().Err(err).Msg("Error marshalling service unavailable error")
+						continue
 					}
-
-					log.Printf("Sending error response: %s", string(response))
+					if log.Debug().Enabled() {
+						log.Debug().Str("response", string(response)).Msg("Sending the error response")
+					}
 
 					_, err = client.RawInformation(value.To, value.From, value.ID, "error", string(response))
 					if err != nil {
-						log.Fatal(err.Error())
+						log.Error().Stack().Err(err).Msg("Sending service unavailable failed")
+						continue
 					}
 				}
 			}
