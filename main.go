@@ -85,6 +85,14 @@ type PingRequest struct {
 	XMLName xml.Name `xml:"urn:xmpp:ping ping"`
 }
 
+type IQErrorNotAcceptable struct {
+	XMLName xml.Name `xml:"error"`
+	Type    string   `xml:"type,attr"`
+	Error   struct {
+		XMLName xml.Name `xml:"urn:ietf:params:xml:ns:xmpp-stanzas not-acceptable"`
+	}
+}
+
 type IQErrorServiceUnavailable struct {
 	XMLName xml.Name `xml:"error"`
 	Type    string   `xml:"type,attr"`
@@ -431,6 +439,11 @@ func processIncommingStanzas(client *xmpp.Client, config Config) {
 					log.Print("Sending ping response")
 					if err := client.SendResultPing(value.ID, value.From); err != nil {
 						log.Printf("Error during ping response: %v", err)
+					}
+				} else if err := xml.Unmarshal(value.Query, &IQErrorNotAcceptable{}); err == nil {
+					if value.From == fmt.Sprintf("%s/%s", config.XMPP.MUC, config.XMPP.Nick) {
+						client.JoinMUCNoHistory(config.XMPP.MUC, config.XMPP.Nick)
+						log.Println("Rejoined MUC because of failed ping")
 					}
 				} else {
 					iqError := IQErrorServiceUnavailable{
