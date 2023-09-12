@@ -232,9 +232,7 @@ func initDB(db *gorm.DB, repo string) {
 
 	fdroid, err := getIndex(repo)
 	if err != nil {
-		if err.(net.Error).Temporary() {
-			log.Fatal("Could not init DB because of timeout, please restart later")
-		}
+		log.Fatalf("Could not init DB: %v", err)
 	}
 	appMap := make(map[string]Application)
 	for _, app := range fdroid.Apps {
