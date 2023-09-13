@@ -314,10 +314,10 @@ func checkUpdates(wg *sync.WaitGroup, db *gorm.DB, client *xmpp.Client, config *
 	var builder strings.Builder
 
 	sort.Slice(addedApps, func(i, j int) bool {
-		return addedApps[i].Name < addedApps[j].Name
+		return strings.ToUpper(addedApps[i].Name) < strings.ToUpper(addedApps[j].Name)
 	})
 	sort.Slice(updatedApps, func(i, j int) bool {
-		return updatedApps[i].Name < updatedApps[j].Name
+		return strings.ToUpper(updatedApps[i].Name) < strings.ToUpper(updatedApps[j].Name)
 	})
 
 	builder.WriteString(fmt.Sprintf("*⟳ %d apps added, %d updated at %s*\n\n", len(addedApps), len(updatedApps), fdroid.Repo.Name))
