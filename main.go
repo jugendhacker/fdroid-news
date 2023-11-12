@@ -143,7 +143,8 @@ func main() {
 	}
 
 	db, err := gorm.Open(sqlite.Open("fdroid-news.sqlite"), &gorm.Config{
-		PrepareStmt: true,
+		PrepareStmt:     true,
+		CreateBatchSize: 1000,
 	})
 	if err != nil {
 		log.Fatal().Stack().Err(err).Msg("Erorr opening database")
