@@ -37,9 +37,9 @@ import (
 	"time"
 
 	"github.com/glebarez/sqlite"
-	"github.com/mattn/go-xmpp"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"github.com/xmppo/go-xmpp"
 	"gopkg.in/yaml.v3"
 	"gorm.io/gorm"
 )
@@ -188,9 +188,10 @@ func main() {
 	}
 
 	options := xmpp.Options{
-		Host:     config.XMPP.Host,
-		User:     config.XMPP.Username,
-		Password: config.XMPP.Password,
+		Host:      config.XMPP.Host,
+		User:      config.XMPP.Username,
+		Password:  config.XMPP.Password,
+		Mechanism: "SCRAM-SHA-1",
 	}
 	client, err := options.NewClient()
 	if err != nil {
