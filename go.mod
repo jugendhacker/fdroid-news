@@ -6,13 +6,13 @@ toolchain go1.22.1
 
 require (
 	gopkg.in/yaml.v3 v3.0.1
-	gorm.io/gorm v1.25.7
+	gorm.io/gorm v1.25.9
 )
 
 require (
 	github.com/glebarez/sqlite v1.11.0
 	github.com/rs/zerolog v1.32.0
-	github.com/xmppo/go-xmpp v0.1.2
+	github.com/xmppo/go-xmpp v0.2.0
 )
 
 require (
@@ -25,9 +25,9 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
-	golang.org/x/crypto v0.21.0 // indirect
-	golang.org/x/net v0.22.0 // indirect
-	golang.org/x/sys v0.18.0 // indirect
+	golang.org/x/crypto v0.22.0 // indirect
+	golang.org/x/net v0.24.0 // indirect
+	golang.org/x/sys v0.19.0 // indirect
 	modernc.org/libc v1.45.0 // indirect
 	modernc.org/mathutil v1.6.0 // indirect
 	modernc.org/memory v1.7.2 // indirect
