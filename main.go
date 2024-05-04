@@ -358,7 +358,15 @@ func getIndex(repo string) (Fdroid, error) {
 	repoURL.RawQuery = ""
 	repoURL.Path += "/index-v1.jar"
 	log.Printf("Getting %s", repoURL.String())
-	resp, err := http.Get(repoURL.String())
+
+	client := http.DefaultClient
+	req, err := http.NewRequest("GET", repoURL.String(), nil)
+	if err != nil {
+		log.Warn().Stack().Err(err).Msg("Error constructing http client")
+	}
+	req.Header.Set("User-Agent", "fdroid-news Bot (https://sr.ht/~j-r/fdroid-news/)")
+
+	resp, err := client.Do(req)
 	if err != nil {
 		if err, ok := err.(net.Error); ok && err.Temporary() {
 			log.Printf("Temporary error reaching %s", repoURL.String())
@@ -368,6 +376,7 @@ func getIndex(repo string) (Fdroid, error) {
 		}
 	}
 
+	defer resp.Body.Close()
 	b, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatal().Stack().Err(err).Msg("Could not read response")
