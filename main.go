@@ -218,7 +218,7 @@ func main() {
 		wg.Done()
 	}()
 
-	ticker := time.NewTicker(15 * time.Minute)
+	ticker := time.NewTicker(1 * time.Hour)
 
 	for _, repo := range config.Repos {
 		wg.Add(1)
