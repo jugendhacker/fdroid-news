@@ -121,7 +121,8 @@ type Config struct {
 		MUC      string
 		Nick     string
 	}
-	Repos []string `yaml:",flow"`
+	Repos         []string `yaml:",flow"`
+	CheckInterval string   `yaml:",omitempty"`
 }
 
 const aboutMsg = `Hi I'm a bot reporting about updates in F-Droid repos.
@@ -218,7 +219,16 @@ func main() {
 		wg.Done()
 	}()
 
-	ticker := time.NewTicker(1 * time.Hour)
+	var ticker *time.Ticker
+	if config.CheckInterval == "" {
+		ticker = time.NewTicker(1 * time.Hour)
+	} else {
+		parsedDuration, err := time.ParseDuration(config.CheckInterval)
+		if err != nil {
+			log.Fatal().Stack().Err(err).Msg("Unable to parse duration")
+		}
+		ticker = time.NewTicker(parsedDuration)
+	}
 
 	for _, repo := range config.Repos {
 		wg.Add(1)

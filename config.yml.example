@@ -7,3 +7,4 @@ xmpp:
 repos:
   - "https://f-droid.org/repo"
   - "https://apt.izzysoft.de/fdroid/repo"
+checkinterval: 15m
