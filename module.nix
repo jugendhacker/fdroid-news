@@ -54,7 +54,7 @@ with lib;
       cfg = config.services.fdroid-news;
       fdroid-news = pkgs.fdroid-news;
     in mkIf cfg.enable {
-      environment.etc."fdroid-news/config.yml".source = (pkgs.formats.yaml {}).generate "config.yml" {xmpp = removeAttrs cfg ["enable" "repos"]; repos = cfg.repos;};
+      environment.etc."fdroid-news/config.yml".source = (pkgs.formats.yaml {}).generate "config.yml" {xmpp = removeAttrs cfg ["enable" "repos" "passowrdFile" "debugMode"]; repos = cfg.repos;};
       systemd.services.fdroid-news = {
         description = "fdroid-news bot";
         wantedBy = [ "multi-user.target" ];
