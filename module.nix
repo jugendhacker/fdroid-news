@@ -44,6 +44,9 @@ with lib;
     group = mkOption {
       type = types.str;
     };
+    debugMode = mkOption {
+      type = types.bool;
+    };
   };
 
   config =
@@ -58,7 +61,9 @@ with lib;
         after    = [ "network.target" ];
         serviceConfig = {
           Type = "simple";
-          ExecStart = "${fdroid-news}/bin/fdroid-news -c /etc/fdroid-news/config.yml" + optionalString (cfg.passwordFile != null) " -p ${cfg.passwordFile}";
+          ExecStart = "${fdroid-news}/bin/fdroid-news -c /etc/fdroid-news/config.yml"
+                      + optionalString (cfg.passwordFile != null) " -p ${cfg.passwordFile}"
+                      + optionalString (cfg.debugMode) "-v";
           StateDirectory = "fdroid-news";
           ConfigurationDirectory = "fdroid-news";
           WorkingDirectory = "/var/lib/fdroid-news";
