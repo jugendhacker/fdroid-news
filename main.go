@@ -458,6 +458,7 @@ func processIncommingStanzas(client *xmpp.Client, config Config) {
 
 		switch value := stanza.(type) {
 		case xmpp.IQ:
+			log.Debug().Msgf("Incomming IQ stanza: %v", value)
 			if value.Type == "get" {
 				err := xml.Unmarshal(value.Query, &PingRequest{})
 				if err == nil {
