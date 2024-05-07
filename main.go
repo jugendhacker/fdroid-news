@@ -37,6 +37,7 @@ import (
 	"time"
 
 	"github.com/glebarez/sqlite"
+	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/xmppo/go-xmpp"
@@ -128,6 +129,8 @@ type Config struct {
 const aboutMsg = `Hi I'm a bot reporting about updates in F-Droid repos.
 
 I was made by j.r. My code is licensed under AGPL-3.0-or-later and could be found at https://git.sr.ht/~j-r/fdroid-news`
+
+var pingDone map[string]bool = make(map[string]bool)
 
 func main() {
 	var configFile, passwordFile string
@@ -436,15 +439,42 @@ func saveNewApps(newApps map[string]Application, db *gorm.DB, repo string, packa
 }
 
 func doPings(client *xmpp.Client, wg *sync.WaitGroup, config *Config) {
+	wg.Add(1)
+	go doMucPing(client, wg, config)
+
 	err := client.PingC2S("", "")
 	if err != nil {
-		log.Warn().Stack().Err(err).Msg("C2S ping failed")
+		log.Fatal().Stack().Err(err).Msg("C2S ping failed")
 	}
 
-	err = client.PingC2S("", config.XMPP.MUC+"/"+config.XMPP.Nick)
+	wg.Done()
+}
+
+func doMucPing(client *xmpp.Client, wg *sync.WaitGroup, config *Config) {
+
+	pingRequest, err := xml.Marshal(PingRequest{})
+	if err != nil {
+		log.Fatal().Stack().Err(err).Msg("Error marshalling ping request")
+	}
+	id := uuid.New()
+
+	pingDone[id.String()] = false
+
+	_, err = client.RawInformation(client.JID(), config.XMPP.MUC+"/"+config.XMPP.Nick, id.String(), "get", string(pingRequest))
 	if err != nil {
 		log.Warn().Stack().Err(err).Msg("MUC ping failed")
+		return
 	}
+
+	time.Sleep(20 * time.Second)
+
+	if !pingDone[id.String()] {
+		log.Debug().Msgf("Rejoined MUC because ping failed with pingID %v", id.String())
+		if _, err := client.JoinMUCNoHistory(config.XMPP.MUC, config.XMPP.Nick); err != nil {
+			log.Warn().Stack().Err(err).Msg("Rejoining MUC failed")
+		}
+	}
+
 	wg.Done()
 }
 
@@ -458,8 +488,9 @@ func processIncommingStanzas(client *xmpp.Client, config Config) {
 
 		switch value := stanza.(type) {
 		case xmpp.IQ:
-			log.Debug().Msgf("Incomming IQ stanza: %v", value)
-			if value.Type == "get" {
+			log.Debug().Msgf("Incomming IQ stanza: %v, query: %s", value, string(value.Query))
+			switch value.Type {
+			case "get":
 				err := xml.Unmarshal(value.Query, &PingRequest{})
 				if err == nil {
 					log.Debug().Msg("Sending ping response")
@@ -492,6 +523,10 @@ func processIncommingStanzas(client *xmpp.Client, config Config) {
 						log.Error().Stack().Err(err).Msg("Sending service unavailable failed")
 						continue
 					}
+				}
+			case "result":
+				if _, ok := pingDone[value.ID]; ok {
+					pingDone[value.ID] = true
 				}
 			}
 		case xmpp.Chat:
