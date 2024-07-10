@@ -278,7 +278,11 @@ func checkUpdates(wg *sync.WaitGroup, db *gorm.DB, client *xmpp.Client, config *
 
 	appIdList := fdroid.AppIDList()
 
-	db.Where(&DBApplication{Repo: repo}).Where("app_id IN ? ", appIdList).Find(&knownApps)
+	tx := db.Where(&DBApplication{Repo: repo}).Where("app_id IN ? ", appIdList).Find(&knownApps)
+	if tx.Error != nil {
+		log.Error().Stack().Err(tx.Error).Msg("Error searching for existing apps")
+		return
+	}
 
 	repoApps := make(map[string]Application)
 	for _, app := range fdroid.Apps {
