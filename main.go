@@ -538,7 +538,7 @@ func processIncommingStanzas(client *xmpp.Client, config Config) {
 					break
 				}
 				if remoteSplit[1] != config.XMPP.Nick {
-					r, _ := regexp.Compile(fmt.Sprintf(`^%s[\s,:]`, regexp.QuoteMeta(config.XMPP.Host)))
+					r, _ := regexp.Compile(fmt.Sprintf(`^%s[\s,:]`, regexp.QuoteMeta(config.XMPP.Nick)))
 					if r.Match([]byte(value.Text)) {
 						_, err := client.Send(xmpp.Chat{
 							Remote: strings.Split(value.Remote, "/")[0],
