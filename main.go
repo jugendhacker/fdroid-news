@@ -215,11 +215,11 @@ func main() {
 
 	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		for range pingTicker.C {
 			wg.Add(1)
 			doPings(client, &wg, &config)
 		}
-		wg.Done()
 	}()
 
 	var ticker *time.Ticker
@@ -239,13 +239,13 @@ func main() {
 	}
 	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		for range ticker.C {
 			for _, repo := range config.Repos {
 				wg.Add(1)
 				go checkUpdates(&wg, db, client, &config, repo)
 			}
 		}
-		wg.Done()
 	}()
 
 	wg.Wait()
@@ -266,6 +266,8 @@ func initDB(db *gorm.DB, repo string) {
 }
 
 func checkUpdates(wg *sync.WaitGroup, db *gorm.DB, client *xmpp.Client, config *Config, repo string) {
+	defer wg.Done()
+
 	log.Debug().Msg("Starting update check")
 
 	fdroid, err := getIndex(repo)
@@ -363,8 +365,6 @@ func checkUpdates(wg *sync.WaitGroup, db *gorm.DB, client *xmpp.Client, config *
 	if err != nil {
 		log.Fatal().Stack().Err(err).Msg("Error sending groupchat message")
 	}
-
-	wg.Done()
 }
 
 func getIndex(repo string) (Fdroid, error) {
@@ -443,6 +443,7 @@ func saveNewApps(newApps map[string]Application, db *gorm.DB, repo string, packa
 }
 
 func doPings(client *xmpp.Client, wg *sync.WaitGroup, config *Config) {
+	defer wg.Done()
 	wg.Add(1)
 	go doMucPing(client, wg, config)
 
@@ -450,11 +451,10 @@ func doPings(client *xmpp.Client, wg *sync.WaitGroup, config *Config) {
 	if err != nil {
 		log.Fatal().Stack().Err(err).Msg("C2S ping failed")
 	}
-
-	wg.Done()
 }
 
 func doMucPing(client *xmpp.Client, wg *sync.WaitGroup, config *Config) {
+	defer wg.Done()
 
 	pingRequest, err := xml.Marshal(PingRequest{})
 	if err != nil {
@@ -478,8 +478,6 @@ func doMucPing(client *xmpp.Client, wg *sync.WaitGroup, config *Config) {
 			log.Warn().Stack().Err(err).Msg("Rejoining MUC failed")
 		}
 	}
-
-	wg.Done()
 }
 
 func processIncommingStanzas(client *xmpp.Client, config Config) {
