@@ -192,10 +192,9 @@ func main() {
 	}
 
 	options := xmpp.Options{
-		Host:      config.XMPP.Host,
-		User:      config.XMPP.Username,
-		Password:  config.XMPP.Password,
-		Mechanism: "SCRAM-SHA-1",
+		Host:     config.XMPP.Host,
+		User:     config.XMPP.Username,
+		Password: config.XMPP.Password,
 	}
 	client, err := options.NewClient()
 	if err != nil {
