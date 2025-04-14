@@ -192,9 +192,11 @@ func main() {
 	}
 
 	options := xmpp.Options{
-		Host:     config.XMPP.Host,
-		User:     config.XMPP.Username,
-		Password: config.XMPP.Password,
+		Host:        config.XMPP.Host,
+		User:        config.XMPP.Username,
+		Password:    config.XMPP.Password,
+		SSDP:        true,
+		UserAgentSW: "fdroid-news",
 	}
 	client, err := options.NewClient()
 	if err != nil {
