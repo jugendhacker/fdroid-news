@@ -13,7 +13,7 @@ require (
 	github.com/glebarez/sqlite v1.11.0
 	github.com/google/uuid v1.6.0
 	github.com/rs/zerolog v1.34.0
-	github.com/xmppo/go-xmpp v0.2.12
+	github.com/xmppo/go-xmpp v0.2.13
 )
 
 require (

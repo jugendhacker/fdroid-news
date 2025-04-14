@@ -29,8 +29,8 @@ github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec/go.mod h1:qq
 github.com/rs/xid v1.6.0/go.mod h1:7XoLgs4eV+QndskICGsho+ADou8ySMSjJKDIan90Nz0=
 github.com/rs/zerolog v1.34.0 h1:k43nTLIwcTVQAncfCw4KZ2VY6ukYoZaBPNOE8txlOeY=
 github.com/rs/zerolog v1.34.0/go.mod h1:bJsvje4Z08ROH4Nhs5iH600c3IkWhwp44iRc54W6wYQ=
-github.com/xmppo/go-xmpp v0.2.12 h1:t0diqkjLOsxN6CoOhRaJXDgKIMuF/a40H0u4Euu/wbo=
-github.com/xmppo/go-xmpp v0.2.12/go.mod h1:1cAY0Dmpijv5v2LYvx9kLSu6FDIPsbG/dUIkdDKTqDc=
+github.com/xmppo/go-xmpp v0.2.13 h1:Hx4trmdurbqch1bnEfXSwnXC+HtfUWuJIwdfkeb7ylg=
+github.com/xmppo/go-xmpp v0.2.13/go.mod h1:fpNSRVkLqRssgqFAzpbxbI6e19IyKQ0fYKCQDnkII8s=
 golang.org/x/crypto v0.37.0 h1:kJNSjF/Xp7kU0iB2Z+9viTPMW4EqqsrywMXLJOOsXSE=
 golang.org/x/crypto v0.37.0/go.mod h1:vg+k43peMZ0pUMhYmVAWysMK35e6ioLh3wB8ZCAfbVc=
 golang.org/x/mod v0.17.0 h1:zY54UmvipHiNd+pm+m0x9KhZ9hl1/7QNMyxXbc6ICqA=
