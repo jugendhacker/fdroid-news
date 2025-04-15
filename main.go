@@ -448,7 +448,8 @@ func doPings(client *xmpp.Client, wg *sync.WaitGroup, config *Config) {
 	wg.Add(1)
 	go doMucPing(client, wg, config)
 
-	err := client.PingC2S("", "")
+	jidSplit := strings.Split(config.XMPP.Username, "@")
+	err := client.PingC2S("", jidSplit[len(jidSplit)-1])
 	if err != nil {
 		log.Fatal().Stack().Err(err).Msg("C2S ping failed")
 	}
