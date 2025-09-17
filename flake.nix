@@ -3,7 +3,7 @@
   description = "fdroid-news XMPP bot";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/release-24.11";
+    nixpkgs.url = "github:nixos/nixpkgs/release-25.05";
   };
 
   outputs = inputs@{ self, nixpkgs }:
@@ -22,7 +22,7 @@
         pname = "${package-name}";
         src = ./.;
         proxyVendor = true;
-        vendorHash = "sha256-Me9XtTbxP7sBFN16l1tkW0fhFX/UJs/g62xPfI+asV8=";
+        vendorHash = "sha256-uGKjd8P4ZJfOTKTpAjl1Et8PtR9qtnS1SOQsxyj7Fcw=";
       };
     };
 
